@@ -112,6 +112,9 @@ y = w_1x_1+w_2x_2+\cdots+w_px_p+b
 - \(b\): 절편
 - \(y\): 종속변수
 
+<img width="435" height="207" alt="image" src="https://github.com/user-attachments/assets/910f1dca-2ae6-48cb-bba7-f91b5a636577" />
+
+
 일반적인 머신러닝 회귀 문제에서는 여러 개의 독립변수를 사용하는 다중선형회귀가 많이 활용됩니다.
 
 ---
