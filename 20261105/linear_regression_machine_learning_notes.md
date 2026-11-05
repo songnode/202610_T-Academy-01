@@ -48,6 +48,9 @@
 
 동일한 면적의 아파트라도 지역, 연식, 층수 등에 따라 가격이 달라집니다. 따라서 단순 평균보다는 이러한 조건들을 고려한 평균 가격을 구하는 것이 더 의미 있습니다.
 
+<img width="770" height="613" alt="image" src="https://github.com/user-attachments/assets/7c6e22d3-bae1-4565-98a2-dc7edf62a79e" />
+
+
 ## 1.2 회귀식(Regression Equation)
 
 다양한 조건을 조합하여 모든 경우의 수에 대한 가격표를 만드는 것은 상당히 어렵습니다. 조건이 하나만 추가되어도 표 전체를 다시 만들어야 할 수 있습니다.
