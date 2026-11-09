@@ -36,6 +36,9 @@ hour_cos = -0.707
 
 월 정보도 동일한 방식으로 12개월 주기를 적용합니다.
 
+<img width="1569" height="659" alt="image" src="https://github.com/user-attachments/assets/f5b2b124-1ff2-4ab8-90ae-62cef4065890" />
+
+
 ## 4. TMS 프로젝트 적용
 
 TMS 프로젝트에서는 시간대 및 계절에 따른 배출량 변화 패턴을 학습하기 위해 다음 5개 Feature를 사용합니다.
