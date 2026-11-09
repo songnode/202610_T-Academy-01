@@ -24,13 +24,8 @@ Sin과 Cos를 이용하면 23시와 0시가 서로 가까운 시간이라는 특
 
 하루 24시간을 기준으로 변환합니다.
 
-\[
-hour\_sin = \sin\left(\frac{2\pi \times hour}{24}\right)
-\]
+<img width="439" height="238" alt="image" src="https://github.com/user-attachments/assets/85f7fc54-24cf-463b-8a38-e41a05cfa5b6" />
 
-\[
-hour\_cos = \cos\left(\frac{2\pi \times hour}{24}\right)
-\]
 
 예를 들어 09:00은 다음과 같이 변환됩니다.
 
