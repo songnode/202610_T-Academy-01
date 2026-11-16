@@ -12,34 +12,37 @@
 1. 현재 모델의 판단 기준(Threshold)이 적절한지 확인
 2. 위험 데이터의 불균형 문제 개선
 3. 입력 Feature 개선
-4. 모델 알고리즘 및 하이퍼파라미터 최적화
-5. 여러 모델을 비교하고 최종 운영 기준에 맞게 선정
+4. 모델의 하이퍼파라미터 최적화
+5. 다양한 알고리즘 비교
+6. 최종 운영 목적에 적합한 모델 선정
 
-**핵심은 오경보를 크게 늘리지 않으면서 Recall을 높이는 방향으로 모델을 개선하는 것이다.**
+**핵심은 오경보를 크게 늘리지 않으면서 실제 위험 탐지율(Recall)을 높이는 방향으로 모델을 개선하는 것이다.**
 
 ---
 
 ## 2. 모델 성능 개선 방법
 
-모델을 개선하는 방법은 크게 5가지로 구분할 수 있다.
+모델을 개선하는 방법은 크게 6가지로 구분할 수 있다.
 
 | 구분 | 개선 방법 | 목적 | 우선순위 |
 |---|---|---|---|
 | ① 판단 기준 최적화 | Threshold 조정 | 오경보와 미탐의 균형 조정 | 최우선 |
 | ② 데이터 불균형 개선 | Class Weight, SMOTE | 적은 위험 데이터의 학습 강화 | 높음 |
 | ③ Feature Engineering | 입력 변수 추가·변경 | 위험 상황을 구분할 정보 강화 | 높음 |
-| ④ 하이퍼파라미터 튜닝 | Optuna, Grid Search | 모델 학습 성능 최적화 | 높음 |
-| ⑤ 알고리즘 개선 | XGBoost, LightGBM 등 비교 | 데이터에 적합한 모델 탐색 | 중간 |
+| ④ 하이퍼파라미터 탐색 | ValidationCurve, GridSearchCV, Optuna 등 | 최적 파라미터 탐색 | 높음 |
+| ⑤ 알고리즘 개선 | XGBoost, LightGBM, LSTM 등 | 데이터에 적합한 모델 탐색 | 중간 |
+| ⑥ 실행 최적화 | Parallel Processing | 실험 및 학습 시간 단축 | 병행 적용 |
 
-### 개선 방법의 차이
+### 2.1 개선 방법의 차이
 
-- **Threshold 조정**: 이미 학습된 모델의 예측 점수 중 어디부터 위험으로 판단할지 결정하는 방법
-- **Class Weight / SMOTE**: 위험 데이터의 불균형을 개선하여 학습하는 방법
-- **Feature Engineering**: 모델이 위험 상황을 더 잘 구분할 수 있도록 입력 데이터를 개선하는 방법
-- **하이퍼파라미터 튜닝**: 모델의 학습 설정값을 최적화하는 방법
-- **알고리즘 개선**: 다른 모델 구조를 적용하여 성능을 비교하는 방법
+- **Threshold 조정**: 이미 학습된 모델의 예측 점수 중 어디부터 위험으로 판단할지 결정한다.
+- **Class Weight / SMOTE**: 위험 데이터의 불균형을 개선하여 학습한다.
+- **Feature Engineering**: 모델이 위험 상황을 더 잘 구분할 수 있도록 입력 데이터를 개선한다.
+- **하이퍼파라미터 튜닝**: 모델의 학습 설정값을 최적화한다.
+- **알고리즘 개선**: 다른 모델 구조를 적용하여 성능을 비교한다.
+- **Parallel Processing**: 여러 실험을 동시에 실행하여 탐색 시간을 단축한다.
 
-따라서 먼저 Threshold 문제인지 확인하고, 이후 모델 자체를 개선하는 것이 효율적이다.
+따라서 먼저 Threshold 문제인지 확인하고, 이후 데이터와 Feature, 모델 자체를 개선하는 것이 효율적이다.
 
 ---
 
@@ -47,7 +50,7 @@
 
 ### 3.1 현재 모델의 문제점
 
-현재 국내 NOx 모델의 분석 결과는 다음과 같다.
+현재 국내 NOx 분류 모델의 분석 결과는 다음과 같다.
 
 | 지표 | 대만 | 국내 |
 |---|---:|---:|
@@ -94,7 +97,7 @@ Threshold를 0.7로 낮추면 더 많은 위험 데이터를 탐지할 수 있�
 
 - Threshold는 Validation 데이터에서 결정한다.
 - Test 데이터는 최종 성능 평가에만 사용한다.
-- Test 결과를 보고 Threshold를 다시 조정하면 평가 결과가 왜곡될 수 있다.
+- Test 결과를 보고 Threshold를 다시 조정하면 평가 결과가 왜곡된다.
 - 대만과 국내는 데이터 분포가 다를 수 있으므로 각 데이터의 Validation에서 Threshold를 별도로 결정한다.
 
 ---
@@ -123,11 +126,13 @@ TMS 데이터는 정상 데이터에 비해 위험 데이터가 적을 수 있�
 Class Weight를 적용하면 위험 데이터를 잘못 분류했을 때 더 큰 패널티를 주도록 학습할 수 있다.
 
 **장점**
+
 - 실제 데이터를 복제하거나 생성하지 않는다.
 - 적용이 비교적 간단하다.
 - XGBoost 등의 분류 모델에서 지원한다.
 
 **TMS 프로젝트 적용**
+
 - XGBoost의 `scale_pos_weight` 활용
 - 위험 데이터에 적용하는 가중치를 여러 수준으로 비교
 - 가중치에 따른 Recall과 FPR 변화 확인
@@ -141,10 +146,12 @@ SMOTE(Synthetic Minority Over-sampling Technique)는 위험 데이터가 부족�
 예를 들어 위험 데이터 A와 B가 있을 때 두 데이터 사이의 특성을 보간하여 새로운 위험 데이터를 생성한다.
 
 **장점**
+
 - 부족한 위험 데이터의 학습 비중을 높일 수 있다.
 - 기존 데이터를 단순 복제하는 방식보다 다양한 학습 샘플을 제공할 수 있다.
 
 **주의사항**
+
 - 실제로 발생하지 않은 위험 패턴을 생성할 수 있다.
 - 시간에 따른 농도 변화와 설비 운전 상태의 연속성을 훼손할 수 있다.
 - 정상과 위험의 경계에 있는 데이터가 합성되면 오히려 오분류가 증가할 수 있다.
@@ -170,7 +177,13 @@ SMOTE(Synthetic Minority Over-sampling Technique)는 위험 데이터가 부족�
 
 네 가지 실험을 동일한 데이터 분할과 평가 기준으로 비교한다.
 
-SMOTE는 반드시 학습 데이터에만 적용해야 한다. Validation과 Test 데이터에는 원본 데이터를 그대로 사용해야 하며, 시간 순서에 따른 데이터 분할을 먼저 수행해야 한다.
+**SMOTE 적용 시 주의사항**
+
+- Train, Validation, Test 데이터를 먼저 분리한다.
+- SMOTE는 Train 데이터에만 적용한다.
+- Validation과 Test에는 합성 데이터를 적용하지 않는다.
+- 시간 순서와 설비별 특성이 훼손되지 않는지 확인한다.
+- 시계열 데이터의 경우 일반 SMOTE 외에 시간적 특성을 고려한 샘플링 방법도 검토한다.
 
 ---
 
@@ -221,13 +234,354 @@ SMOTE는 반드시 학습 데이터에만 적용해야 한다. Validation과 Tes
 
 각 Feature 조합마다 모델을 다시 학습해야 하며, 동일한 데이터 분할과 평가 조건을 유지해야 한다.
 
+### 5.4 Feature Ablation 실험
+
+Feature가 실제로 모델 성능 개선에 기여하는지 확인하기 위한 실험이다.
+
+| 실험 | Feature 구성 | 확인 목적 |
+|---|---|---|
+| A | 기존 Feature | Baseline |
+| B | 기존 + 최근 1시간 변화량 | 단기 변화 효과 |
+| C | 기존 + 이동평균 | 평균적인 추세 효과 |
+| D | 기존 + 변동성 | 농도 불안정성 효과 |
+| E | 기존 + 24시간 이력 | 장기 이력 효과 |
+| F | 성능이 좋은 Feature 조합 | 조합 효과 |
+
+각 실험은 Feature 구성을 변경한 뒤 모델을 다시 학습해야 한다. 학습된 모델에서 입력 변수를 단순히 제거하는 방식만으로는 올바른 Feature Ablation 결과를 얻기 어렵다.
+
 ---
 
-## 6. 방법 ④ 하이퍼파라미터 튜닝
+## 6. 방법 ④ 하이퍼파라미터 탐색 및 최적화
 
-모델의 학습 방식을 결정하는 설정값을 조정하는 방법이다.
+하이퍼파라미터는 모델이 학습하는 과정과 복잡도를 결정하는 설정값이다.
 
-현재 XGBoost를 사용하고 있다면 다음 항목을 조정할 수 있다.
+예를 들어 XGBoost에서는 트리의 깊이, 학습률, 트리 개수 등을 조정하여 성능을 개선할 수 있다.
+
+하지만 파라미터를 임의로 변경하는 것보다 체계적인 탐색 방법을 사용하는 것이 좋다.
+
+### 6.1 주요 탐색 방법
+
+| 방법 | 주요 기능 | 장점 | 단점 |
+|---|---|---|---|
+| ValidationCurve | 특정 파라미터 변화에 따른 성능 분석 | 파라미터 영향 파악이 쉬움 | 여러 파라미터 조합 탐색은 어려움 |
+| ParameterGrid | 탐색할 파라미터 조합 생성 | 실험 조합을 명확하게 관리 | 자체적으로 성능 평가하지 않음 |
+| GridSearchCV | 모든 파라미터 조합을 교차 검증 | 체계적이고 재현성 높음 | 조합이 많으면 느림 |
+| RandomizedSearchCV | 무작위로 파라미터 조합 탐색 | 넓은 범위를 효율적으로 탐색 | 최적 조합을 보장하지 않음 |
+| Bayesian Optimization | 이전 실험 결과를 활용해 유망한 조합 탐색 | 적은 실험으로 좋은 조합 탐색 가능 | 탐색 과정과 설정이 상대적으로 복잡 |
+| Optuna | 다양한 탐색 알고리즘과 실험 관리 지원 | 유연한 탐색 및 중간 결과 관리 | 탐색 설정과 평가 설계 필요 |
+
+여기서 Parallel Processing은 탐색 알고리즘과 별도로 적용할 수 있는 실행 최적화 방법이다.
+
+### 6.2 ValidationCurve
+
+특정 파라미터 하나를 변화시키면서 모델 성능이 어떻게 달라지는지 확인하는 방법이다.
+
+예를 들어 XGBoost의 `max_depth`를 변경하면서 성능을 비교한다.
+
+```python
+from sklearn.model_selection import validation_curve
+from xgboost import XGBClassifier
+
+model = XGBClassifier(
+    n_estimators=300,
+    learning_rate=0.05,
+    random_state=42
+)
+
+param_range = [2, 3, 4, 5, 6, 7, 8]
+
+train_scores, valid_scores = validation_curve(
+    model,
+    X_train,
+    y_train,
+    param_name="max_depth",
+    param_range=param_range,
+    cv=3,
+    scoring="average_precision",
+    n_jobs=-1
+)
+
+print("Train:", train_scores.mean(axis=1))
+print("Valid:", valid_scores.mean(axis=1))
+```
+
+**결과 해석**
+
+- Train과 Validation 점수가 모두 낮음: 과소적합 가능성
+- Train 점수는 높지만 Validation 점수가 낮음: 과적합 가능성
+- Validation 점수가 가장 높은 구간: 추가 탐색 후보
+
+이번 프로젝트에서는 다음 파라미터를 하나씩 분석할 수 있다.
+
+- `max_depth`
+- `learning_rate`
+- `min_child_weight`
+- `n_estimators`
+
+ValidationCurve는 특정 파라미터의 영향을 파악하는 데 적합하며, 여러 파라미터 조합을 동시에 탐색하는 용도는 아니다.
+
+### 6.3 ParameterGrid
+
+여러 파라미터의 조합을 미리 정의하고 생성하는 방법이다.
+
+```python
+from sklearn.model_selection import ParameterGrid
+
+param_grid = {
+    "max_depth": [3, 5, 7],
+    "learning_rate": [0.01, 0.05, 0.1],
+    "n_estimators": [100, 300, 500]
+}
+
+grid = ParameterGrid(param_grid)
+
+print("전체 실험 조합:", len(grid))
+
+for params in grid:
+    print(params)
+```
+
+위 설정에서는 다음과 같이 총 27개 조합이 생성된다.
+
+\[
+3 \times 3 \times 3 = 27
+\]
+
+ParameterGrid는 파라미터 조합을 생성하는 기능이지, 그 자체가 최적 파라미터를 찾아주는 알고리즘은 아니다.
+
+### 6.4 GridSearchCV
+
+ParameterGrid에서 생성한 조합을 교차 검증으로 평가하고 가장 좋은 조합을 찾는 방법이다.
+
+```python
+from sklearn.model_selection import GridSearchCV
+from xgboost import XGBClassifier
+
+model = XGBClassifier(
+    random_state=42,
+    eval_metric="aucpr"
+)
+
+param_grid = {
+    "max_depth": [3, 5, 7],
+    "learning_rate": [0.01, 0.05, 0.1],
+    "n_estimators": [100, 300, 500]
+}
+
+grid_search = GridSearchCV(
+    estimator=model,
+    param_grid=param_grid,
+    scoring="average_precision",
+    cv=3,
+    n_jobs=-1,
+    verbose=1
+)
+
+grid_search.fit(X_train, y_train)
+
+print("Best Parameters:", grid_search.best_params_)
+print("Best AP:", grid_search.best_score_)
+```
+
+27개 조합에 3-Fold 교차 검증을 적용하면 총 81회의 모델 학습이 수행된다.
+
+**장점**
+
+- 모든 조합을 빠짐없이 비교할 수 있다.
+- 결과를 재현하고 설명하기 쉽다.
+- 기준 모델의 파라미터 탐색에 적합하다.
+
+**단점**
+
+- 탐색 조합이 많아지면 학습 시간이 급격히 증가한다.
+- 모든 조합이 좋은 후보인 것은 아니므로 비효율적인 실험이 발생할 수 있다.
+
+따라서 처음부터 파라미터를 너무 넓게 설정하기보다는 ValidationCurve 등으로 탐색 범위를 좁힌 다음 적용하는 것이 좋다.
+
+### 6.5 RandomizedSearchCV
+
+GridSearchCV는 사전에 지정한 모든 조합을 탐색하지만, RandomizedSearchCV는 지정한 범위에서 일부 조합을 무작위로 선택하여 평가한다.
+
+```python
+from sklearn.model_selection import RandomizedSearchCV
+from scipy.stats import randint, uniform
+from xgboost import XGBClassifier
+
+model = XGBClassifier(
+    random_state=42,
+    eval_metric="aucpr"
+)
+
+param_distributions = {
+    "max_depth": randint(2, 9),
+    "learning_rate": uniform(0.01, 0.19),
+    "n_estimators": randint(100, 801),
+    "min_child_weight": randint(1, 11)
+}
+
+search = RandomizedSearchCV(
+    estimator=model,
+    param_distributions=param_distributions,
+    n_iter=50,
+    scoring="average_precision",
+    cv=3,
+    n_jobs=-1,
+    random_state=42
+)
+
+search.fit(X_train, y_train)
+
+print("Best Parameters:", search.best_params_)
+print("Best AP:", search.best_score_)
+```
+
+**장점**
+
+- 탐색 조합이 많을 때 효율적이다.
+- 연속형 파라미터 탐색에 적합하다.
+- GridSearchCV보다 적은 횟수로 넓은 범위를 탐색할 수 있다.
+
+GridSearchCV와 Bayesian Optimization 사이에서 중간 단계의 탐색 방법으로 활용할 수 있다.
+
+### 6.6 Bayesian Optimization
+
+Bayesian Optimization은 이전 실험 결과를 활용하여 다음에 평가할 유망한 파라미터 조합을 선택하는 방법이다.
+
+GridSearchCV는 미리 정한 모든 조합을 평가하지만, Bayesian Optimization은 이전 결과를 바탕으로 다음 실험 대상을 결정한다.
+
+**GridSearch와 Bayesian Optimization의 차이**
+
+| 비교 | GridSearch | Bayesian Optimization |
+|---|---|---|
+| 탐색 방식 | 사전에 정한 모든 조합 평가 | 이전 결과를 이용해 다음 조합 선택 |
+| 탐색 순서 | 사전 정의된 순서 | 이전 평가 결과에 따라 결정 |
+| 실험 횟수 | 조합 수에 따라 증가 | 제한된 횟수로 유망한 조합 탐색 |
+| 장점 | 단순하고 재현하기 쉬움 | 탐색 효율이 높을 수 있음 |
+| 단점 | 조합이 많으면 느림 | 탐색 설정과 과정이 상대적으로 복잡 |
+
+대표적인 구현 도구는 다음과 같다.
+
+- Optuna: TPE 등 다양한 탐색 알고리즘 지원
+- scikit-optimize: Bayesian 탐색 및 `BayesSearchCV` 제공
+- BayesianOptimization: 별도 Python 라이브러리
+
+Optuna의 기본 TPE Sampler는 이전 실험 결과를 이용해 유망한 파라미터 조합을 탐색하는 방식이다. 엄밀히 말해 Gaussian Process 기반 탐색과 구현 방식은 다르지만, 실무에서는 Bayesian Optimization 계열의 순차적 최적화 방법으로 함께 활용된다.
+
+### 6.7 Optuna 적용 예시
+
+```python
+import optuna
+
+from xgboost import XGBClassifier
+from sklearn.metrics import average_precision_score
+
+def objective(trial):
+
+    params = {
+        "max_depth": trial.suggest_int("max_depth", 2, 8),
+        "learning_rate": trial.suggest_float(
+            "learning_rate", 0.01, 0.2, log=True
+        ),
+        "n_estimators": trial.suggest_int(
+            "n_estimators", 100, 800
+        ),
+        "min_child_weight": trial.suggest_int(
+            "min_child_weight", 1, 10
+        ),
+        "subsample": trial.suggest_float("subsample", 0.7, 1.0),
+        "colsample_bytree": trial.suggest_float(
+            "colsample_bytree", 0.7, 1.0
+        ),
+        "eval_metric": "aucpr",
+        "random_state": 42
+    }
+
+    model = XGBClassifier(**params)
+
+    model.fit(X_train, y_train)
+
+    probabilities = model.predict_proba(X_valid)[:, 1]
+
+    return average_precision_score(y_valid, probabilities)
+
+
+study = optuna.create_study(direction="maximize")
+
+study.optimize(objective, n_trials=50)
+
+print("Best Parameters:", study.best_params)
+print("Best AP:", study.best_value)
+```
+
+위 코드는 AP(Average Precision)를 최적화하는 예시다.
+
+탐색 횟수는 50회로 설정했지만, 데이터 규모와 학습 시간에 따라 조정할 수 있다.
+
+**주의사항**
+
+- Optuna도 Validation 데이터만 사용해 최적 파라미터를 결정해야 한다.
+- Test 데이터는 탐색 과정에 사용하지 않는다.
+- 동일한 데이터 분할과 평가 조건으로 GridSearchCV와 비교한다.
+- 탐색 결과가 특정 데이터 기간에만 유효하지 않은지 확인한다.
+
+---
+
+## 7. 방법 ⑤ Parallel Processing
+
+여러 파라미터 조합이나 모델 학습을 동시에 실행하는 방법이다.
+
+예를 들어 GridSearchCV에서 다음과 같이 설정할 수 있다.
+
+```python
+GridSearchCV(
+    estimator=model,
+    param_grid=param_grid,
+    cv=3,
+    scoring="average_precision",
+    n_jobs=-1
+)
+```
+
+- `n_jobs=1`: 순차 실행
+- `n_jobs=2`: 2개 작업 병렬 실행
+- `n_jobs=-1`: 사용 가능한 CPU 작업자 최대 활용
+
+**장점**
+
+- 전체 탐색 시간 단축
+- 여러 파라미터 조합을 동시에 평가
+- 대규모 실험에 유리
+
+**주의사항**
+
+- CPU 사용량 증가
+- 메모리 사용량 증가
+- XGBoost 자체도 멀티스레드를 사용하므로 과도한 병렬 실행 주의
+- 여러 실험을 동시에 수행할 때 자원 경합이 발생할 수 있음
+
+예를 들어 GridSearchCV가 여러 조합을 병렬로 실행한다면 XGBoost의 `n_jobs`를 1~2 정도로 제한하는 방식도 고려할 수 있다.
+
+**중요한 점은 Parallel Processing은 별도의 모델 최적화 알고리즘이 아니라 탐색 및 학습 시간을 단축하는 실행 방식이라는 것이다.**
+
+---
+
+## 8. TMS 프로젝트에 권장하는 하이퍼파라미터 탐색 전략
+
+모든 방법을 한꺼번에 사용하는 것보다 단계별로 적용하는 것이 좋다.
+
+| 단계 | 적용 방법 | 수행 목적 |
+|---|---|---|
+| 1단계 | ValidationCurve | 주요 파라미터의 영향 분석 |
+| 2단계 | ParameterGrid | 탐색 범위와 조합 정의 |
+| 3단계 | GridSearchCV | 기본 파라미터 조합 비교 |
+| 4단계 | RandomizedSearchCV | 넓은 탐색 범위에서 유망한 조합 탐색 |
+| 5단계 | Bayesian Optimization(Optuna) | 유망한 파라미터 조합을 효율적으로 탐색 |
+| 6단계 | Parallel Processing | 탐색 시간 단축 |
+| 7단계 | Threshold 최적화 | 목표 FPR에서 Recall 최대화 |
+
+Parallel Processing은 1~6단계에서 필요한 만큼 병행 적용한다.
+
+### 8.1 XGBoost 주요 파라미터
 
 | 파라미터 | 의미 | 조정 목적 |
 |---|---|---|
@@ -240,66 +594,24 @@ SMOTE는 반드시 학습 데이터에만 적용해야 한다. Validation과 Tes
 | `reg_alpha` | L1 규제 | 불필요한 변수 영향 억제 |
 | `reg_lambda` | L2 규제 | 모델 복잡도 억제 |
 
-모든 파라미터를 임의로 변경하기보다는 Optuna를 이용해 최적의 조합을 탐색하는 방법을 추천한다.
+### 8.2 탐색 범위 설정 예시
 
-### 6.1 Optuna 적용 예시
+| 파라미터 | 탐색 범위 예시 |
+|---|---|
+| `max_depth` | 2 ~ 8 |
+| `learning_rate` | 0.01 ~ 0.2 |
+| `n_estimators` | 100 ~ 800 |
+| `min_child_weight` | 1 ~ 10 |
+| `subsample` | 0.7 ~ 1.0 |
+| `colsample_bytree` | 0.7 ~ 1.0 |
+| `reg_alpha` | 0 ~ 10 |
+| `reg_lambda` | 0.1 ~ 10 |
 
-```python
-import optuna
-from xgboost import XGBClassifier
-from sklearn.metrics import average_precision_score
-
-def objective(trial):
-    params = {
-        "max_depth": trial.suggest_int("max_depth", 2, 8),
-        "learning_rate": trial.suggest_float(
-            "learning_rate", 0.01, 0.2, log=True
-        ),
-        "n_estimators": trial.suggest_int(
-            "n_estimators", 100, 800
-        ),
-        "min_child_weight": trial.suggest_int(
-            "min_child_weight", 1, 10
-        ),
-        "subsample": trial.suggest_float(
-            "subsample", 0.7, 1.0
-        ),
-        "colsample_bytree": trial.suggest_float(
-            "colsample_bytree", 0.7, 1.0
-        ),
-        "eval_metric": "aucpr",
-        "random_state": 42
-    }
-
-    model = XGBClassifier(**params)
-    model.fit(X_train, y_train)
-
-    probabilities = model.predict_proba(X_valid)[:, 1]
-
-    return average_precision_score(y_valid, probabilities)
-
-study = optuna.create_study(direction="maximize")
-study.optimize(objective, n_trials=50)
-
-print(study.best_params)
-```
-
-위 코드는 AP(Average Precision)를 최적화하는 예시다.
-
-다만 이번 TMS 프로젝트의 최종 목표가 단순히 AP를 높이는 것은 아니다.
-
-최종적으로 다음 지표를 함께 확인해야 한다.
-
-- AP: 위험 데이터를 얼마나 잘 구분하는가?
-- Recall: 실제 위험을 얼마나 탐지하는가?
-- FPR: 정상 데이터에 대한 오경보가 얼마나 발생하는가?
-- Precision: 발생한 경보 중 실제 위험은 얼마나 되는가?
-
-**FPR 목표를 만족하면서 Recall을 높이는 방향으로 최종 모델을 선정하는 것이 적절하다.**
+위 범위는 초기 탐색을 위한 예시이며, 기존 Baseline 모델의 설정값과 ValidationCurve 결과를 참고해 조정한다.
 
 ---
 
-## 7. 방법 ⑤ 모델 알고리즘 자체를 개선
+## 9. 방법 ⑥ 모델 알고리즘 자체를 개선
 
 현재 모델이 Random Forest 또는 XGBoost 중심이라면 다른 알고리즘과 비교할 수 있다.
 
@@ -324,7 +636,7 @@ print(study.best_params)
 
 ---
 
-## 8. 회귀 모델도 별도로 개선할 필요가 있다
+## 10. 회귀 모델도 별도로 개선할 필요가 있다
 
 이번 내용은 FPR과 Recall 중심의 분류 모델에 대한 것이지만, TMS 프로젝트에는 회귀 모델도 있으므로 구분해서 접근해야 한다.
 
@@ -339,7 +651,7 @@ print(study.best_params)
 | Quantile Regression | 평균이 아닌 특정 분위수 예측 | 위험 수준을 보수적으로 예측 |
 | Feature Engineering | 최근 변화량·이동평균 등 추가 | 미래 농도 변화 설명력 향상 |
 
-### 8.1 Delta Prediction
+### 10.1 Delta Prediction
 
 미래 농도 자체가 아니라 현재 대비 변화량을 예측하는 방법이다.
 
@@ -357,71 +669,7 @@ print(study.best_params)
 
 ---
 
-## 9. TMS 분류 모델 Upgrade 실험 순서
-
-위의 방법을 전부 한꺼번에 적용하면 어떤 방법이 성능 개선에 기여했는지 알기 어렵다.
-
-따라서 다음과 같이 단계별 실험을 진행하는 것을 권장한다.
-
-### 1단계. 기존 모델 진단
-
-- 기존 모델의 Threshold별 FPR·Recall 측정
-- Validation에서 FPR 1%, 2%, 5%에 해당하는 Threshold 확인
-- AP, Precision, Recall, FPR 비교
-- 예측 점수 분포 확인
-
-### 2단계. 데이터 불균형 개선
-
-- 기존 모델
-- Class Weight 적용
-- SMOTE 적용
-- Class Weight + SMOTE 적용
-
-네 가지 실험 결과를 비교한다.
-
-### 3단계. Feature 개선
-
-- 최근 1시간·3시간 농도 변화량
-- 이동평균 및 최대값
-- 농도 변동성
-- 기존 24시간 Feature의 효과 재검증
-
-Feature 조합별로 모델을 다시 학습한다.
-
-### 4단계. 모델 및 파라미터 최적화
-
-- XGBoost 파라미터 튜닝
-- LightGBM 비교
-- Optuna를 활용한 최적 파라미터 탐색
-- 필요시 LSTM 비교
-
-### 5단계. 최종 모델 선정
-
-- 동일한 Test 데이터에서 평가
-- 목표 FPR 조건에서 Recall 비교
-- 고정된 최종 Test 결과로 모델 선정
-- 추론시간과 운영 비용 확인
-
-### 실험 결과 비교표
-
-| 실험 모델 | AP | Recall | FPR | Precision |
-|---|---:|---:|---:|---:|
-| Baseline | 측정 | 측정 | 측정 | 측정 |
-| Class Weight | 측정 | 측정 | 측정 | 측정 |
-| SMOTE | 측정 | 측정 | 측정 | 측정 |
-| Feature 개선 | 측정 | 측정 | 측정 | 측정 |
-| Hyperparameter Tuning | 측정 | 측정 | 측정 | 측정 |
-| LightGBM | 측정 | 측정 | 측정 | 측정 |
-
-모든 실험은 동일한 시간 기준 데이터 분할과 평가 데이터로 비교해야 한다. Threshold도 Validation에서 결정한 후 Test에서는 고정해야 한다.
-
-특히 현재 국내 K-TMS 평가 데이터가 약 13일 수준이므로, 이 기간의 성능만으로 모델 개선 효과를 확정하기에는 한계가 있다.
-
-평가 기간을 늘리고 날짜가 바뀌어도 개선 효과가 유지되는지 확인하는 것이 중요하다.
-
----
-
-## 10. 대만 데이터 활용을 통한 성능 개선
+## 11. 대만 데이터 활용을 통한 성능 개선
 
 이번 프로젝트는 대만 데이터와 국내 데이터를 모두 분석하고 있으므로, 단순히 SMOTE를 적용하는 것 외에 데이터 활용 전략도 검토할 수 있다.
 
@@ -437,17 +685,178 @@ Feature 조합별로 모델을 다시 학습한다.
 
 대만 데이터는 학습에 활용하되, 국내 Validation과 Test 데이터는 학습에 섞지 않아야 한다.
 
-또한 SMOTE는 학습 데이터 안에서만 적용하고, 시간 순서와 설비별 특성이 훼손되지 않는지 확인해야 한다.
+또한 대만과 국내 데이터는 측정 환경, 설비 특성, 농도 분포가 다를 수 있으므로 단순 결합이 항상 성능 개선으로 이어지는 것은 아니다.
+
+SMOTE는 학습 데이터 안에서만 적용하고, 시간 순서와 설비별 특성이 훼손되지 않는지 확인해야 한다.
 
 ---
 
-## 11. 최종 의견 및 멘토링 방향
+## 12. 모델 최적화 시 데이터 분할 및 평가 기준
 
-이번 TMS 프로젝트에서 처음부터 LSTM 같은 복잡한 모델로 바꾸거나 SMOTE를 적용하는 것보다, 다음 세 가지를 먼저 진행하는 것이 좋겠다.
+파라미터 탐색을 아무리 잘하더라도 데이터 분할이 잘못되면 평가 결과를 신뢰하기 어렵다.
+
+특히 TMS 데이터는 30분 단위의 시계열 데이터이므로 일반적인 무작위 분할은 주의해야 한다.
+
+### 12.1 시간 순서 기반 데이터 분할
+
+| 구분 | 데이터 | 용도 |
+|---|---|---|
+| Train | 과거 구간 | 모델 학습 |
+| Validation | Train 이후 구간 | 파라미터 및 Threshold 결정 |
+| Test | 가장 최근 구간 | 최종 성능 평가 |
+
+일반적인 `GridSearchCV(cv=3)`은 시간 순서에 따른 분할을 자동으로 보장하지 않는다.
+
+따라서 `TimeSeriesSplit` 또는 날짜·설비 단위의 사용자 정의 분할을 검토해야 한다.
+
+동일 설비의 연속된 관측값이 학습과 평가에 무분별하게 섞이지 않도록 데이터 분할 기준을 명확히 해야 한다.
+
+또한 미래 시점의 데이터가 과거 시점의 학습 Feature에 포함되지 않도록 Feature 생성 과정에서도 데이터 누수를 확인해야 한다.
+
+### 12.2 TMS 데이터의 추가 고려사항
+
+- 동일 설비의 시간 순서 유지
+- Train과 Validation 사이의 시간적 누수 방지
+- Feature 생성 시 미래 데이터 참조 금지
+- 분류 라벨의 예측 기간과 회귀 Target의 예측 기간 구분
+- 결측 및 NULL 라벨 처리 기준 유지
+- 모든 모델이 동일한 평가 대상 데이터에서 비교되도록 관리
+
+현재 분류 모델은 향후 30분 또는 60분 내 위험 수준 도달 여부를 판단하는 구조이고, 회귀 모델은 정확히 60분 후의 농도를 예측한다.
+
+따라서 두 모델의 예측 대상과 평가 기준을 혼동하지 않도록 해야 한다.
+
+### 12.3 최적화 목표를 AP 하나로 한정하지 않기
+
+이번 프로젝트의 목적은 AP만 높이는 것이 아니다.
+
+최종 운영 목표는 허용 가능한 FPR 수준에서 Recall을 최대한 높이는 것이다.
+
+| 평가 단계 | 주요 지표 | 목적 |
+|---|---|---|
+| 모델 탐색 | AP | 위험·정상 데이터 구분 능력 비교 |
+| Threshold 결정 | FPR, Recall | 오경보와 미탐의 균형 조정 |
+| 최종 평가 | AP, FPR, Recall, Precision | 모델의 종합 성능 확인 |
+
+AP를 기준으로 후보 모델을 탐색하되, 최종 선정은 Validation에서 결정한 Threshold를 Test에 적용하여 판단하는 방식이 적절하다.
+
+---
+
+## 13. TMS 분류 모델 Upgrade 실험 로드맵
+
+위의 방법을 모두 한꺼번에 적용하면 어떤 방법이 성능 개선에 기여했는지 알기 어렵다.
+
+따라서 다음과 같이 단계별 실험을 진행하는 것을 권장한다.
+
+### 1단계. 기존 모델 진단
+
+- 기존 모델의 Threshold별 FPR·Recall 측정
+- Validation에서 FPR 1%, 2%, 5%에 해당하는 Threshold 확인
+- AP, Precision, Recall, FPR 비교
+- 예측 점수 분포 확인
+- 과적합 여부 및 데이터 분포 확인
+
+### 2단계. 데이터 불균형 개선
+
+- 기존 모델(Baseline)
+- Class Weight 적용
+- SMOTE 적용
+- Class Weight + SMOTE 적용
+
+네 가지 실험 결과를 비교한다.
+
+### 3단계. Feature 개선
+
+- 최근 1시간·3시간 농도 변화량
+- 이동평균 및 최대값
+- 농도 변동성
+- 기존 24시간 Feature의 효과 재검증
+- Feature Ablation 실험
+
+Feature 조합별로 모델을 다시 학습한다.
+
+### 4단계. 하이퍼파라미터 탐색
+
+- ValidationCurve로 주요 파라미터 영향 분석
+- ParameterGrid로 탐색 조합 정의
+- GridSearchCV로 기본 조합 비교
+- RandomizedSearchCV로 넓은 범위 탐색
+- Optuna를 이용한 Bayesian 계열 탐색
+- Parallel Processing으로 실험 시간 단축
+
+### 5단계. 모델 알고리즘 비교
+
+- Random Forest
+- XGBoost
+- LightGBM
+- 필요시 LSTM
+
+동일한 데이터와 평가 기준으로 성능을 비교한다.
+
+### 6단계. 최종 모델 선정
+
+- 동일한 Test 데이터에서 평가
+- 목표 FPR 조건에서 Recall 비교
+- Precision 및 AP 확인
+- 추론시간과 운영 비용 확인
+- 데이터 기간이 달라져도 성능이 유지되는지 확인
+
+---
+
+## 14. 실험 결과 관리 기준
+
+모든 실험은 동일한 데이터 분할과 평가 기준으로 비교해야 한다.
+
+### 14.1 모델 개선 실험 비교표
+
+| 실험 모델 | AP | Recall | FPR | Precision | 학습 시간 |
+|---|---:|---:|---:|---:|---:|
+| Baseline | 측정 | 측정 | 측정 | 측정 | 측정 |
+| Class Weight | 측정 | 측정 | 측정 | 측정 | 측정 |
+| SMOTE | 측정 | 측정 | 측정 | 측정 | 측정 |
+| Feature 개선 | 측정 | 측정 | 측정 | 측정 | 측정 |
+| GridSearchCV | 측정 | 측정 | 측정 | 측정 | 측정 |
+| Optuna | 측정 | 측정 | 측정 | 측정 | 측정 |
+| LightGBM | 측정 | 측정 | 측정 | 측정 | 측정 |
+
+### 14.2 파라미터 탐색 방법 비교표
+
+| 탐색 방법 | 탐색 횟수 | 최적 AP | Recall | FPR | 소요 시간 |
+|---|---:|---:|---:|---:|---:|
+| GridSearchCV | 측정 | 측정 | 측정 | 측정 | 측정 |
+| RandomizedSearchCV | 측정 | 측정 | 측정 | 측정 | 측정 |
+| Optuna | 측정 | 측정 | 측정 | 측정 | 측정 |
+| Optuna + Parallel | 측정 | 측정 | 측정 | 측정 | 측정 |
+
+이 표를 통해 단순히 어떤 탐색 방법이 높은 AP를 찾았는지뿐 아니라, 동일한 시간과 자원에서 얼마나 효율적으로 좋은 모델을 찾았는지도 비교할 수 있다.
+
+**실험 결과 관리 시 함께 기록할 항목**
+
+- 데이터 Snapshot ID
+- Train / Validation / Test 기간
+- 데이터 건수 및 위험 데이터 비율
+- Feature 구성
+- 모델 및 파라미터 설정
+- Random Seed
+- Threshold
+- 평가 지표
+- 학습 및 추론 시간
+
+특히 국내 K-TMS 평가 데이터가 약 13일 수준이므로, 이 기간의 성능만으로 모델 개선 효과를 확정하기에는 한계가 있다.
+
+평가 기간을 늘리고 날짜가 바뀌어도 개선 효과가 유지되는지 확인하는 것이 중요하다.
+
+---
+
+## 15. 최종 의견 및 멘토링 방향
+
+이번 TMS 프로젝트에서는 처음부터 LSTM 같은 복잡한 모델로 바꾸거나 SMOTE를 적용하는 것보다 다음 세 가지를 먼저 진행하는 것이 좋겠다.
 
 ### 첫째. Threshold 최적화
 
 현재 국내 모델의 FPR 1.00%, Recall 46.9%가 어느 정도 개선 가능한지 확인한다.
+
+동일한 FPR 조건에서 국내 모델의 Recall이 얼마나 개선되는지 확인하여 Threshold 문제와 모델의 구분 능력 문제를 구분한다.
 
 ### 둘째. Class Weight와 SMOTE 비교
 
@@ -457,9 +866,25 @@ Feature 조합별로 모델을 다시 학습한다.
 
 ### 셋째. Feature Engineering과 하이퍼파라미터 튜닝
 
-농도 변화 추세와 시간적 특성을 반영하고, Optuna를 활용해 XGBoost 및 LightGBM의 성능을 비교한다.
+농도 변화 추세와 시간적 특성을 반영하고, ValidationCurve와 GridSearchCV로 파라미터 영향을 확인한다.
 
-개선 효과를 확인한 후에야 더 복잡한 모델을 도입할 필요가 있는지 판단할 수 있다.
+이후 Optuna를 활용해 XGBoost 및 LightGBM의 성능을 비교한다.
+
+### 최종 권장 실험 순서
+
+| 순서 | 실험 항목 | 주요 목적 |
+|---|---|---|
+| 1 | Baseline 및 Threshold 분석 | 현재 모델의 문제점 진단 |
+| 2 | Class Weight | 위험 데이터 학습 강화 |
+| 3 | SMOTE | 합성 데이터 활용 효과 확인 |
+| 4 | Feature Engineering | 위험 패턴 설명력 개선 |
+| 5 | ValidationCurve | 주요 파라미터 영향 분석 |
+| 6 | GridSearchCV | 기본 파라미터 조합 탐색 |
+| 7 | Optuna | 효율적인 파라미터 최적화 |
+| 8 | LightGBM 비교 | 알고리즘별 성능 비교 |
+| 9 | Threshold 재조정 | 운영 목표에 맞는 최종 기준 설정 |
+
+Parallel Processing은 GridSearchCV, RandomizedSearchCV 등에서 실험 시간을 단축하기 위해 함께 적용한다.
 
 ### 멘티에게 전달할 핵심 메시지
 
@@ -467,18 +892,8 @@ Feature 조합별로 모델을 다시 학습한다.
 
 먼저 현재 모델이 왜 위험 상황을 놓치는지 원인을 분석하고, Threshold 조정, 데이터 불균형 개선, Feature Engineering, 파라미터 튜닝을 단계적으로 적용해야 한다.
 
+파라미터 탐색도 단순히 값을 변경하는 것이 아니라 ValidationCurve, GridSearchCV, Bayesian Optimization 등 적절한 방법을 선택하고 실험 결과를 비교해야 한다.
+
 중요한 것은 여러 기법을 적용했다는 사실이 아니라, **어떤 방법이 실제 위험 탐지율을 얼마나 개선했으며 오경보는 얼마나 증가했는지를 실험으로 증명하는 것**이다.
 
-이 방향으로 진행하면 단순히 모델을 학습시키는 프로젝트에서 벗어나, 실제 운영 환경에 적합한 AI 모델을 찾아가는 과정이 된다.
-
-### 권장 실험 과제
-
-우선 다음 5개 실험을 수행하고 각 실험의 FPR·Recall·AP를 비교한다.
-
-1. Baseline
-2. Class Weight
-3. SMOTE
-4. Feature 개선
-5. Optuna 기반 하이퍼파라미터 튜닝
-
-**최종 목표는 단순히 모델의 점수를 높이는 것이 아니라, 실제 TMS 운영 환경에서 사용할 수 있는 최적의 모델을 찾는 것이다.**
+이번 프로젝트의 최종 목표는 단순히 모델의 점수를 높이는 것이 아니라, 실제 TMS 운영 환경에서 사용할 수 있는 최적의 모델을 찾는 것이다.
