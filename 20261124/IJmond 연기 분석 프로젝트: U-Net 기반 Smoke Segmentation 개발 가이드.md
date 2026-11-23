@@ -1,13 +1,13 @@
 # IJmond 연기 분석 
-## U-Net 기반 Smoke Segmentation 전담 Agent 개발 가이드
+## U-Net 기반 Smoke Segmentation 전담 Agent 개발
 
 ---
 
-# 1. 프로젝트 개요
+# 1. 개요
 
-## 1.1 프로젝트 목적
+## 1.1 목적
 
-본 프로젝트는 산업시설에서 촬영한 이미지를 활용하여 연기 영역을 자동으로 분할하고, 연기의 면적과 불투명도 등을 정량적으로 분석하는 AI 시스템을 구축하는 것을 목표로 한다.
+산업시설에서 촬영한 이미지를 활용하여 연기 영역을 자동으로 분할하고, 연기의 면적과 불투명도 등을 정량적으로 분석하는 AI 시스템을 구축하는 것을 목표로 한다.
 
 IJmond Industrial Smoke Segmentation Dataset을 활용하여 U-Net 기반 Smoke Segmentation 모델을 학습하고, 학습된 모델을 Smoke Segmentation 전담 Agent에 연결한다.
 
