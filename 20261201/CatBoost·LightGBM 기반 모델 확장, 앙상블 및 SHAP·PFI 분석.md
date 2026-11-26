@@ -1,4 +1,4 @@
-# TMS 프로젝트: AI 사전 경고 모델 학습·평가 및 설명 가능성 분석 가이드
+# TMS 프로젝트: CatBoost·LightGBM 기반 모델 확장, 앙상블 및 SHAP·PFI 분석
 
 ## 1. 문서 목적
 
